@@ -148,6 +148,8 @@ RC Table::destroy() {
       return RC::GENERIC_ERROR;
     }
   }
+
+  return RC::SUCCESS;
 }
 
 RC Table::open(const char *meta_file, const char *base_dir)
