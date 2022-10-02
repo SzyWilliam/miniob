@@ -146,6 +146,7 @@ private:
   PageNum page_num_;
 };
 
+// 每一个BP的缓存算法
 class BPFrameManager
 {
 public:
@@ -209,6 +210,7 @@ private:
   PageNum  current_page_num_ = -1;
 };
 
+// 针对每一个文件都有一个Buffer Pool
 class DiskBufferPool
 {
 public:
@@ -311,6 +313,7 @@ private:
   friend class BufferPoolIterator;
 };
 
+// BufferPoolManager是整个系统级别的Buffer Pool，针对每一个文件打开一个DiskBufferPool
 class BufferPoolManager
 {
 public:

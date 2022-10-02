@@ -68,6 +68,7 @@ RC SelectStmt::create(Db *db, const Selects &select_sql, Stmt *&stmt)
   for (int i = select_sql.attr_num - 1; i >= 0; i--) {
     const RelAttr &relation_attr = select_sql.attributes[i];
 
+    // 如果是select *，那么就是把所有tables的fields都给包含进来
     if (common::is_blank(relation_attr.relation_name) && 0 == strcmp(relation_attr.attribute_name, "*")) {
       for (Table *table : tables) {
         wildcard_fields(table, query_fields);
@@ -77,6 +78,7 @@ RC SelectStmt::create(Db *db, const Selects &select_sql, Stmt *&stmt)
       const char *table_name = relation_attr.relation_name;
       const char *field_name = relation_attr.attribute_name;
 
+      // 如果是select *.*，那么还是包含所有的字段
       if (0 == strcmp(table_name, "*")) {
         if (0 != strcmp(field_name, "*")) {
           LOG_WARN("invalid field name while table is *. attr=%s", field_name);
@@ -106,6 +108,7 @@ RC SelectStmt::create(Db *db, const Selects &select_sql, Stmt *&stmt)
         }
       }
     } else {
+      // 在只有一个table的情况下，可以省略field的table前缀
       if (tables.size() != 1) {
         LOG_WARN("invalid. I do not know the attr's table. attr=%s", relation_attr.attribute_name);
         return RC::SCHEMA_FIELD_MISSING;

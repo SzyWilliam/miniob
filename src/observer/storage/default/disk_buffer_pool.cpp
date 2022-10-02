@@ -54,6 +54,7 @@ RC BPFrameManager::cleanup()
   return RC::SUCCESS;
 }
 
+// 从后往前搜索，找到一个可以被写回到磁盘的page
 Frame *BPFrameManager::begin_purge()
 {
   Frame *frame_can_purge = nullptr;
@@ -78,6 +79,7 @@ Frame *BPFrameManager::get(int file_desc, PageNum page_num)
   return frame;
 }
 
+// 希望分配一个新的page给页
 Frame *BPFrameManager::alloc(int file_desc, PageNum page_num)
 {
   BPFrameId frame_id(file_desc, page_num);
@@ -97,6 +99,7 @@ Frame *BPFrameManager::alloc(int file_desc, PageNum page_num)
   return frame;
 }
 
+// 告知BPFrameManager其中一个Frame的Page已经安全，可以删除了
 RC BPFrameManager::free(int file_desc, PageNum page_num, Frame *frame)
 {
   BPFrameId frame_id(file_desc, page_num);
@@ -178,6 +181,7 @@ DiskBufferPool::~DiskBufferPool()
   LOG_INFO("Exit");
 }
 
+// BufferPool打开文件的初始操作
 RC DiskBufferPool::open_file(const char *file_name)
 {
   int fd;
@@ -191,6 +195,7 @@ RC DiskBufferPool::open_file(const char *file_name)
   file_desc_ = fd;
 
   RC rc = RC::SUCCESS;
+  // 在缓冲池中为header frame分配一个空间
   rc = allocate_frame(BP_HEADER_PAGE, &hdr_frame_);
   if (rc != RC::SUCCESS) {
     LOG_ERROR("failed to allocate frame for header. file name %s", file_name_.c_str());
@@ -203,6 +208,7 @@ RC DiskBufferPool::open_file(const char *file_name)
   hdr_frame_->file_desc_ = fd;
   hdr_frame_->pin_count_ = 1;
   hdr_frame_->acc_time_ = current_time();
+  // 将header frame的数据加载进来
   if ((rc = load_page(BP_HEADER_PAGE, hdr_frame_)) != RC::SUCCESS) {
     LOG_ERROR("Failed to load first page of %s, due to %s.", file_name, strerror(errno));
     hdr_frame_->pin_count_ = 0;
@@ -218,6 +224,7 @@ RC DiskBufferPool::open_file(const char *file_name)
   return RC::SUCCESS;
 }
 
+// 关闭一个文件，可以把所有内存中缓存的dirty Page都flush出去
 RC DiskBufferPool::close_file()
 {
   RC rc = RC::SUCCESS;
@@ -245,7 +252,7 @@ RC DiskBufferPool::close_file()
   return RC::SUCCESS;
 }
 
-RC DiskBufferPool::get_this_page(PageNum page_num, Frame **frame)
+RC DiskBufferPool::get_this_page(PageNum page_num, Frame **frame) 
 {
   RC rc = RC::SUCCESS;
 
@@ -280,6 +287,7 @@ RC DiskBufferPool::get_this_page(PageNum page_num, Frame **frame)
   return RC::SUCCESS;
 }
 
+// 为文件创建一个新的page并缓存在Buffer Pool中
 RC DiskBufferPool::allocate_page(Frame **frame)
 {
   RC rc = RC::SUCCESS;
@@ -294,7 +302,7 @@ RC DiskBufferPool::allocate_page(Frame **frame)
         (file_header_->allocated_pages)++;
         file_header_->bitmap[byte] |= (1 << bit);
         // TODO,  do we need clean the loaded page's data?
-	hdr_frame_->mark_dirty();
+	      hdr_frame_->mark_dirty();
         return get_this_page(i, frame);
       }
     }
@@ -339,6 +347,7 @@ RC DiskBufferPool::allocate_page(Frame **frame)
   return RC::SUCCESS;
 }
 
+// 将page标记为不再使用，随后等待purge
 RC DiskBufferPool::unpin_page(Frame *frame)
 {
   assert(frame->pin_count_ >= 1);
@@ -488,6 +497,7 @@ RC DiskBufferPool::flush_all_pages()
   return RC::SUCCESS;
 }
 
+// 在Buffer Pool中为目标的page找到一个free frame缓存
 RC DiskBufferPool::allocate_frame(PageNum page_num, Frame **buffer)
 {
   while (true) {
@@ -573,6 +583,8 @@ BufferPoolManager::~BufferPoolManager()
   }
 }
 
+// 创建一个空的文件的时候，会向文件的第一页写入BufferPool的Metadata Page
+// 创建完毕之后会关闭这个文件，然后交给open去处理
 RC BufferPoolManager::create_file(const char *file_name)
 {
   int fd = open(file_name, O_RDWR | O_CREAT | O_EXCL, S_IREAD | S_IWRITE);
@@ -618,6 +630,7 @@ RC BufferPoolManager::create_file(const char *file_name)
   return RC::SUCCESS;
 }
 
+// open操作会正式为这个文件分配一个BufferPool进行管理
 RC BufferPoolManager::open_file(const char *_file_name, DiskBufferPool *& _bp)
 {
   std::string file_name(_file_name);
@@ -641,6 +654,7 @@ RC BufferPoolManager::open_file(const char *_file_name, DiskBufferPool *& _bp)
   return RC::SUCCESS;
 }
 
+// close操作会关闭这个文件的BufferPool
 RC BufferPoolManager::close_file(const char *_file_name)
 {
   std::string file_name(_file_name);
@@ -659,6 +673,7 @@ RC BufferPoolManager::close_file(const char *_file_name)
   return RC::SUCCESS;
 }
 
+// 将Frame写回到文件中
 RC BufferPoolManager::flush_page(Frame &frame)
 {
   int fd = frame.file_desc();

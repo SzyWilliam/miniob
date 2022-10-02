@@ -85,6 +85,24 @@ Table *Db::find_table(const char *table_name) const
   return nullptr;
 }
 
+RC Db::drop_table(const char *table_name) {
+  Table* table = find_table(table_name);
+  
+  // if the table is not created, drop it
+  if(table == nullptr) {
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+
+  RC rc = table->destroy();
+  if (rc != SUCCESS) {
+    return rc;
+  }
+
+  opened_tables_.erase(opened_tables_.find(table_name));
+
+  return RC::SUCCESS;
+}
+
 RC Db::open_all_tables()
 {
   std::vector<std::string> table_meta_files;
