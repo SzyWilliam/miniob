@@ -99,6 +99,7 @@ RC Db::drop_table(const char *table_name) {
   }
 
   opened_tables_.erase(opened_tables_.find(table_name));
+  delete table;
 
   return RC::SUCCESS;
 }
